@@ -19,11 +19,7 @@
 (define valid-peers
   (map string-to-peer-info (string-split (caddr args) ",")))
 
-; Try to read the blockchain from a file (DB), otherwise create a new one
-(define db-blockchain
-  (if (file-exists? db-filename)
-      (file->struct db-filename)
-      (initialize-new-blockchain)))
+
 
 ; Create a new wallet for us to use
 (define wallet-a (make-wallet))
@@ -47,8 +43,15 @@
     (define b (init-blockchain genesis-t "1337cafe" utxo))
     b))
 
+; Try to read the blockchain from a file (DB), otherwise create a new one
+(define db-blockchain
+  (if (file-exists? db-filename)
+      (file->struct db-filename)
+      (initialize-new-blockchain)))
+
 (define peer-context
   (peer-context-data "Test peer" port (list->set valid-peers) '() db-blockchain))
+  
 (define (get-blockchain) (peer-context-data-blockchain peer-context))
 
 (run-peer peer-context)
