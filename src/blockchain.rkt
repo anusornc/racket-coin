@@ -5,11 +5,26 @@
 (require "wallet.rkt")
 (require "smart-contracts.rkt")
 
+; all-from-out is used to export all of the definitions from the other files
+(provide (all-from-out "block.rkt")
+         (all-from-out "transaction.rkt")
+         (all-from-out "wallet.rkt")
+         (struct-out blockchain)
+         init-blockchain send-money-blockchain
+         balance-wallet-blockchain valid-blockchain?)
+
+; Struct for the blockchain
+; includes a list of blocks and a list of unspent transaction outputs
 (struct blockchain
   (blocks utxo)
   #:prefab)
 
 ; Procedure for initialization of the blockchain
+; this fuction have 3 parameters:
+; t: the first transaction
+; seed-hash: the seed hash for the first block
+; utxo: the unspent transaction outputs (it is empty at the beginning)
+
 (define (init-blockchain t seed-hash utxo)
   (blockchain (cons (mine-block (process-transaction t) seed-hash) '())
               utxo))
@@ -78,9 +93,4 @@
      (true-for-all?
       mined-block? (map block-hash blocks)))))
 
-(provide (all-from-out "block.rkt")
-         (all-from-out "transaction.rkt")
-         (all-from-out "wallet.rkt")
-         (struct-out blockchain)
-         init-blockchain send-money-blockchain
-         balance-wallet-blockchain valid-blockchain?)
+

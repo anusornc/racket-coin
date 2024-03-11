@@ -3,6 +3,11 @@
 (require "./src/utils.rkt")
 (require "./src/peer-to-peer.rkt")
 
+(provide (all-from-out "./src/blockchain.rkt")
+         (all-from-out "./src/utils.rkt")
+         (all-from-out "./src/peer-to-peer.rkt")
+         format-transaction print-block print-blockchain print-wallets)
+
 
 (define (format-transaction t)
   (format "...~a... sends ...~a... an amount of ~a."
@@ -29,7 +34,3 @@ Hash:\t~a\nHash_p:\t~a\nStamp:\t~a\nNonce:\t~a\nData:\t~a\n"
           (balance-wallet-blockchain b wallet-a)
           (balance-wallet-blockchain b wallet-b)))
 
-(provide (all-from-out "./src/blockchain.rkt")
-         (all-from-out "./src/utils.rkt")
-         (all-from-out "./src/peer-to-peer.rkt")
-         format-transaction print-block print-blockchain print-wallets)

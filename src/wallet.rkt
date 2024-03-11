@@ -1,5 +1,10 @@
 #lang racket
 
+(require crypto)
+(require crypto/all)
+
+(provide (struct-out wallet) make-wallet)
+
 ;the structure of a wallet include a private key and a public key
 (struct wallet
   (private-key public-key)
@@ -21,7 +26,4 @@
             (bytes->hex-string
              (pk-key->datum pubkey 'SubjectPublicKeyInfo)))))
 
-(require crypto)
-(require crypto/all)
 
-(provide (struct-out wallet) make-wallet)
