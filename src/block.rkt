@@ -5,76 +5,74 @@
 (require racket/serialize)
 
 (provide (struct-out block) mine-block valid-block? mined-block?)
-;block structure of Blockchain 
-;includes hash, previous hash, transaction, timestamp, and nonce
-;hash is calculated from the previous hash, timestamp, transaction, and nonce it the hashing of the block
+; โครงสร้างของบล็อก ประกอบไปด้วย 5 ส่วน ได้แก่
+; 1. hash คือ ค่า hash ของบล็อก
+; 2. previous-hash คือ ค่า hash ของบล็อกก่อนหน้า
+; 3. transaction คือ ข้อมูลที่จะถูกบันทึกลงบล็อก
+; 4. timestamp คือ ค่าเวลาที่บล็อกถูกสร้างขึ้น
+; 5. nonce คือ ค่าที่ถูกเพิ่มขึ้นเพื่อให้ค่า hash ของบล็อกตรงกับเงื่อนไขที่กำหนด nonce ย่อมาจาก "number used once" หมายถึง ค่าที่ถูกใช้ครั้งเดียว
 (struct block
   (hash previous-hash transaction timestamp nonce)
   #:prefab)
 
-;function to calculate the hash of the block
-;this function takes the previous hash, timestamp, transaction, and nonce as input
+;ฟังก์ชัน calculate-block-hash ใช้สำหรับคำนวณค่า hash ของบล็อก
 (define (calculate-block-hash previous-hash timestamp transaction nonce)
-  ;hash is calculated using the sha256 algorithm
-  ;all inputs are converted to bytes and concatenated it to a single byte string
-  ;finally it is converted to a hex string representation of the hash
+  ;ค่าแฮชของบล็อกถูกคำนวณจากการเอาค่า hash ของบล็อกก่อนหน้ามาต่อกับค่าเวลาที่บล็อกถูกสร้างขึ้น และข้อมูลที่จะถูกบันทึกลงบล็อก และค่า nonce แล้วคำนวณค่า hash ของบล็อกด้วยฟังก์ชัน sha256
   (bytes->hex-string (sha256 (bytes-append
            (string->bytes/utf-8 previous-hash)
            (string->bytes/utf-8 (number->string timestamp))
-           (string->bytes/utf-8 (~a (serialize transaction)))
+           (string->bytes/utf-8 (~a (serialize transaction))) ; ~a คือ ฟังก์ชันที่ใช้แปลงข้อมูลให้เป็น string
            (string->bytes/utf-8 (number->string nonce))))))
 
-;function to check if the block is valid
-;this function takes the block as input
-;the "?" at the end of the function name is a convention in Racket to indicate that the function returns a boolean value
-;bl is the block that is passed as input
+;ฟังชัน valid-block? ใช้สำหรับตรวจสอบค่า hash ของบล็อกว่าถูกต้องหรือไม่
+;การทำงานคือเปรียบเทียบค่า hash ของบล็อกกับค่า hash ที่คำนวณได้จากฟังก์ชัน calculate-block-hash
+;ถ้าค่า hash ของบล็อกตรงกับค่า hash ที่คำนวณได้จากฟังก์ชัน calculate-block-hash ฟังก์ชันจะคืนค่าเป็น #t ถ้าไม่ตรงกันจะคืนค่าเป็น #f
+;bl คือตัวแปรที่เป็นข้อมูลของบล็อกที่จะถูกตรวจสอบ
 (define (valid-block? bl)
-  ;compares the input hash with the calculated hash
+  ;equal? นั้นเป็นฟังก์ชันใน Racket ที่ใช้สำหรับการเปรียบเทียบค่าของสองตัวแปร
   ;block-xxx is used to access the fields of the block data structure "bl"
   (equal? (block-hash bl)
           (calculate-block-hash (block-previous-hash bl)
                                 (block-timestamp bl)
                                 (block-transaction bl)
                                 (block-nonce bl))))
-;set the difficulty of the blockchain to 2
-;the target is set to the hash of the block
-;2 means that the first 2 characters of the hash should be 0
+
+;difficulty คือการกำหนดความยากในการหาค่า hash ที่ตรงกับเงื่อนไขที่กำหนด
+;2 หมายถึง ค่า hash ที่ต้องมีค่าตั้งแต่ตำแหน่งที่ 1 ถึง 2 ต้องมีค่าเป็น 0 เท่านั้นถึงจะยอมรับ
 ;eg: 00xxxxxx
 (define difficulty 2)
 
-;target is the hash of the block which is calculated by make-bytes function (requires two arguments, the first is the number of bytes to create, and the second is the value to fill the bytes with)
-;the value is then converted to a hex string
-;32 is the space character " " in ASCII
-;if 65 will be "A" in ASCII
-;make-bytes 2 32 will return a two space characters eg "  "
-;converts the bytes to a hex string it will be "2020" (in hex)
+;ตัวแปร target ใช้สำหรับเก็บค่า hash ที่ต้องการหา
+;สร้างจากฟังก์ชัน make-bytes โดยกำหนดค่า 2 และ 32 ซึ่ง 32 คือค่า ASCII ของ space (" ") และ 2 คือจำนวนตัวอักษรที่ต้องการ
+;make-bytes 2 32 จะได้ตำแหน่งว่างสองตำแหน่ง eg "  "
+;ค่าจะถูกแปลงเป็น hex ซึ่งก็คือ "2020" แล้วเก็บไว้ในตัวแปร target
 (define target (bytes->hex-string (make-bytes difficulty 32)))
 
-;this function tries to mine the block
-;the input is the hash of the block which is calculated by the calculate-block-hash function
-;function tries to find the hash that matches the target
-;the hash is converted to bytes and then to a hex string 
+;ฟังก์ชันนี้จะทำการเปรียบเทียบค่าของ hash ที่ได้จากการคำนวณกับค่า target ที่กำหนด
+;ถ้าค่า hash ที่ได้มาตรงกับค่า target ที่กำหนด ฟังก์ชันจะคืนค่าเป็น #t ถ้าไม่ตรงกันจะคืนค่าเป็น #f
+;subbytes คือฟังก์ชันที่ใช้สำหรับการดึงค่าออกมาจากตำแหน่งที่กำหนดซึ่งในกรณีนี้คือตัดออกมาตั้งแต่ตำแหน่งที่ 1 ถึง difficulty ของ hash ที่ได้
 (define (mined-block? hash)
-  ; the hash matches the target, given the difficulty
+  ; เปรียบเทียบค่า hash ที่ได้จากการคำนวณกับค่า target ที่กำหนด
   (equal? (subbytes (hex-string->bytes hash) 1 difficulty)
           (subbytes (hex-string->bytes target) 1 difficulty)))
 
-; Hashcash implementation
-; This function takes the previous hash, timestamp, transaction, and nonce as input
+; ฟังก์ชันนี้จะทำการสร้างบล็อกและทำการคำนวณค่า hash ของบล็อก และทำการหาค่า nonce ที่ทำให้ค่า hash ของบล็อกตรงกับเงื่อนไขที่กำหนด
+; ฟังก์ชันนี้ทำงานตรงกับ Concensus PoW (Proof of Work) ซึ่งเป็นการทำงานที่ทำให้ค่า hash ของบล็อกตรงกับเงื่อนไขที่กำหนด
 (define (make-and-mine-block
          previous-hash timestamp transaction nonce)
-  ;let is used to bind the value of the hash to the variable "hash"
-  ;the value of the hash is calculated by the calculate-block-hash function
+  ;let เป็นการกำหนดตัวแปรใช้ภายในฟังก์ชันและการกำหนดด้วย let ในกรณีนี้คิือตัวแปร hash ที่เก็บค่า hash ของบล็อกที่ได้จากการคำนวณ
+  ;ด้วยฟังก์ชัน calculate-block-hashโดยส่งค่า previous-hash timestamp transaction nonce ไปเป็นอาร์กิวเมนต์
   (let ([hash (calculate-block-hash
                previous-hash timestamp transaction nonce)])
-    ;if the hash is mined, then the block is returned else the nonce is incremented and the function is called recursively
+    ;เช็คว่าค่า hash ที่ได้มาตรงกับเงื่อนไขที่กำหนดหรือไม่กับฟังก์ชัน mined-block?
+    ;ถ้าตรงกันจะสร้างบล็อกและคืนค่าเป็นบล็อกที่ถูกสร้างขึ้น
+    ;ถ้าไม่ตรงกันจะทำการเพิ่มค่า nonce แล้วทำการเรียกฟังก์ชัน make-and-mine-block ใหม่อีกครั้ง (recursive)
     (if (mined-block? hash)
         (block hash previous-hash transaction timestamp nonce)
         (make-and-mine-block
          previous-hash timestamp transaction (+ nonce 1)))))
 
-; function to mine the block by calling the make-and-mine-block function
-; the input is the transaction and the previous hash
+; ฟังก์ชัน mine-block ใช้สำหรับสร้างบล็อกและทำการคำนวณค่า hash ของบล็อก และทำการหาค่า nonce ที่ทำให้ค่า hash ของบล็อกตรงกับเงื่อนไขที่กำหนด โดยการเรียกไปยังฟังก์ชัน make-and-mine-block กำหนดค่าเริ่มต้นของ nonce เป็น 1
 (define (mine-block transaction previous-hash)
   (make-and-mine-block
    previous-hash (current-milliseconds) transaction 1))

@@ -6,38 +6,36 @@
 (provide (struct-out transaction-io)
          make-transaction-io valid-transaction-io?)
 #|
-The transaction structure will consist of a transaction-io structure (transaction input/output). The transaction input will represent the blockchain address from which the money was sent, and the transaction output will represent the blockchain address to which the money was sent.
+Transaction-IO ใช้เพื่อเก็บข้อมูลของการทำธุรกรรม โดยมีข้อมูลดังนี้
+- hash: คือ has ของการทำธุรกรรม
+- value: คือ จำนวนเงินที่ถูกโอน
+- owner: คือ ผู้ถือเงิน
+- timestamp: คือ เวลาที่ทำการทำธุรกรรม
 |#
-; A transaction-io is a record with a hash, value, owner, and timestamp
 (struct transaction-io
   (hash value owner timestamp)
   #:prefab)
 
-; Procedure for calculating the hash of a transaction-io object
-; The hash is calculated by concatenating the value, owner, and timestamp
+; ฟังก์ชันใช้ในการคำนวณหาค่า hash ของ ธุรกรรม
 (define (calculate-transaction-io-hash value owner timestamp)
-  (bytes->hex-string (sha256 (bytes-append
-           (string->bytes/utf-8 (number->string value))
-           (string->bytes/utf-8 (~a (serialize owner)))
-           (string->bytes/utf-8 (number->string timestamp))))))
+  (bytes->hex-string (sha256 (bytes-append    ; ใช้ฟังก์ชัน sha256 ในการคำนวณหาค่า hashโดยเติมค่าของ value, owner และ timestamp ลงไป จากนั้นแปลงค่า hash ที่ได้เป็น string
+           (string->bytes/utf-8 (number->string value)) ; แปลงค่า value จาก number เป็น string และแปลงค่า string ที่ได้เป็น bytes
+           (string->bytes/utf-8 (~a (serialize owner))) ; แปลงค่า owner จาก string เป็น bytes
+           (string->bytes/utf-8 (number->string timestamp)))))) ; แปลงค่า timestamp จาก number เป็น string และแปลงค่า string ที่ได้เป็น bytes
 
-; Make a transaction-io object with calculated hash
-; input: value, owner
-; The transaction-io object will have a hash, value, owner, and timestamp
-; The function returns a transaction-io object
+; ฟังก์ชันใช้ในการสร้างสร้าง ธุรกรรม โดยมีการคำนวณหาค่า hash ของ ธุรกรรม
 (define (make-transaction-io value owner)
   (let ([timestamp (current-milliseconds)]) ; get the current time in milliseconds
-    (transaction-io ; create a transaction-io object
-     (calculate-transaction-io-hash value owner timestamp) ; calculate the hash
-     value  ; set the value
-     owner  ; set the owner
-     timestamp))) ; set the timestamp
+    (transaction-io ; ตัวแปรที่ใช้เก็บข้อมูลของการทำธุรกรรมมีค่าเท่ากับ 
+     (calculate-transaction-io-hash value owner timestamp) ; การคำนวณหาค่า hash ของ ธุรกรรม
+     value  ; ค่าของเงินที่ถูกโอน
+     owner  ; ค่าของผู้ถือเงิน
+     timestamp))) ; ค่าของเวลาที่ทำการทำธุรกรรม
 
-; A transaction-io is valid if...
+; ฟังก์ชันใช้ในการตรวจสอบความถูกต้องของ ธุรกรรม
 (define (valid-transaction-io? t-in)
-  ; the hash is correct
-  (equal? (transaction-io-hash t-in)
-          (calculate-transaction-io-hash
-            (transaction-io-value t-in)
-            (transaction-io-owner t-in)
-            (transaction-io-timestamp t-in))))
+  (equal? (transaction-io-hash t-in) ; ค่าของ hash ดึงออกมาจาก ธุรกรรม t-in
+          (calculate-transaction-io-hash ; เรียกใช้ฟังก์ชัน
+            (transaction-io-value t-in) ; ดึงค่า value จาก t-in
+            (transaction-io-owner t-in) ; ดึงค่า owner จาก t-in
+            (transaction-io-timestamp t-in)))) ; ดึงค่า timestamp จาก t-in

@@ -3,34 +3,37 @@
 
 (require racket/serialize)
 
-; This procedure returns true if the predicate satisfies all members of the list
+; ฟังก์ชันนี้ใช้สำหรับตรวจสอบว่า predicate ทุกตัวใน list ที่กำหนดมานั้นเป็นจริงหรือไม่
+; input: pred - ฟังก์ชันที่รับอาร์กิวเมนต์เดียว และคืนค่าเป็นจริงหรือเท็จ
+; ตัวอย่างการใช้เช่น (true-for-all? (lambda (x) (>= x 0)) '(1 2 3 4 5)) จะคืนค่าเป็นจริง
+; ตัวอย่างการใช้เช่น (true-for-all? (lambda (x) (>= x 0)) '(1 2 -3 4 5)) จะคืนค่าเป็นเท็จ
 (define (true-for-all? pred list)
   (cond
-    [(empty? list) #t] ; If the list is empty, return true
-    [(pred (car list)) (true-for-all? pred (cdr list))] ; If the predicate is true for the first element, check the rest of the list
+    [(empty? list) #t] ; ถ้า list ว่าง ให้คืนค่าเป็นจริง
+    [(pred (car list)) (true-for-all? pred (cdr list))] ; ถ้า pred ที่รับค่าเป็นจริง ให้เรียกตัวเองต่อ
     [else #f]))
 
-; Export a struct to a file
-; The file will be overwritten if it already exists
-; The file will be created if it does not exist
-; input: object - the struct to be exported
+; ฟังก์ชันนี้ชื่อ struct->file ใช้สำหรับเขียน struct ลงในไฟล์
+; input: object - struct ที่ต้องการเขียนลงในไฟล์
 (define (struct->file object file)
-  (let ([out (open-output-file file #:exists 'replace)]) ; Open the file for writing
-    (write (serialize object) out) ; Write the serialized struct to the file
-    (close-output-port out))) ; Close the file
+  (let ([out (open-output-file file #:exists 'replace)]) ; ทำการเปิดไฟล์เพื่อเขียนและถ้าไฟล์นั้นมีอยู่แล้วให้เขียนทับ
+    (write (serialize object) out) ; เขียน struct ลงในไฟล์โดยใช้ serialize เพื่อแปลง struct ให้เป็น string
+    (close-output-port out))) ; ทำการปิดไฟล์
 
-; Import struct contents from a file
-; input: file - the file to be imported
-; output: the struct that was imported
+; ฟังก์ชันนี้ชื่อ file->struct ใช้สำหรับอ่านไฟล์และแปลงเป็น struct
+; input: file - ชื่อไฟล์ที่ต้องการอ่าน
 (define (file->struct file)
-  (letrec ([in (open-input-file file)] ; Open the file for reading
-           [result (read in)]) ; Read the contents of the file
-    (close-input-port in) ; Close the file
-    (deserialize result))) ; Deserialize the contents of the file
+  (letrec ([in (open-input-file file)] ; อ่านไฟล์ที่กำหนด
+           [result (read in)]) ; อ่านข้อมูลจากไฟล์เก็บไว้ในตัวแปร result
+    (close-input-port in) ; ปิดไฟล์
+    (deserialize result))) ; ทำการ deserialize ข้อมูลที่อ่านมาเพื่อแปลงเป็น struct และคืนค่า struct ที่ได้
 
-; Import contract contents from a file
+; ฟังก์ชันนี้ชื่อ file-contract ใช้สำหรับอ่านไฟล์ smart contract
 (define (file->contract file)
-  ; If the file does not exist, return an empty list
+  ; ถ้าไฟล์ไม่มีอยู่ให้คืนค่าเป็น #f
+  ; with-handlers ใช้สำหรับจัดการกับ exception ที่เกิดขึ้น
+  ; exn คือตัวแปรที่ใช้เก็บ exception ที่เกิดขึ้น ซึ่งในกรณีนี้คือ exn:fail? ที่เกิดขึ้นจากการอ่านไฟล์
+  ; ถ้าเกิด exception ให้คืนค่าเป็น #f '() คือการเรียกใช้ lambda ที่ไม่มีอาร์กิวเมนต์ และคืนค่าเป็น #f
   (with-handlers ([exn:fail? (lambda (exn) '())])
-    (read (open-input-file file)))) ; Read the contents of the file if it exists
+    (read (open-input-file file)))) ; ถ้าไฟล์มีอยู่ให้ทำการอ่านไฟล์และคืนค่าเป็น contract ที่ได้
 
