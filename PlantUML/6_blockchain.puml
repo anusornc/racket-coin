@@ -1,0 +1,89 @@
+@startuml
+package "blockchain" {
+  class "block" as block_module
+  class "transaction" as transaction_module
+  class "utils" as utils_module
+  class "wallet" as wallet_module
+  class "smart-contracts" as smart_contracts_module
+
+  blockchain_module --> block_module : requires\nall
+  blockchain_module --> transaction_module : requires\nall
+  blockchain_module --> utils_module : requires\nall
+  blockchain_module --> wallet_module : requires\nall
+  blockchain_module --> smart_contracts_module : requires\nall
+
+  class blockchain {
+    - blocks: list of block
+    - utxo: set of transaction-io
+    + blockchain(blocks: list, utxo: set)
+  }
+
+  blockchain_module --> blockchain : provides
+
+  package "init" {
+    class "init-blockchain" as init_blockchain_function {
+      + init-blockchain(t: transaction,\nseed-hash: string, utxo: set): blockchain
+    }
+
+    init_blockchain_function --> block_module : uses\nmine-block
+    init_blockchain_function --> transaction_module : uses\nprocess-transaction
+    init_blockchain_function --> blockchain : creates
+  }
+
+  blockchain_module --> init_blockchain_function : provides
+
+  package "mining-reward" {
+    class "mining-reward-factor" as mining_reward_factor_function {
+      + mining-reward-factor(blocks: list): number
+    }
+  }
+
+  package "add-transaction-to-blockchain" {
+    class "add-transaction-to-blockchain" as add_transaction_to_blockchain_function {
+      + add-transaction-to-blockchain(b: blockchain,\nt: transaction): blockchain
+    }
+
+    add_transaction_to_blockchain_function --> block_module : uses mine-block,\nblock-hash
+    add_transaction_to_blockchain_function --> transaction_module : uses transaction-inputs,\ntransaction-outputs,\nmake-transaction-io,\ntransaction-from
+    add_transaction_to_blockchain_function --> blockchain : uses blockchain-blocks,\nblockchain-utxo
+    add_transaction_to_blockchain_function --> mining_reward_factor_function : uses\nmining-reward-factor
+  }
+
+  package "send-money" {
+    class "send-money" as send_money_blockchain_function {
+      + send-money(b: blockchain, from: string,\nto: string, value: number,\nc: contract): blockchain
+    }
+
+    send_money_blockchain_function --> transaction_module : uses make-transaction,\ntransaction?,\nprocess-transaction,\ntransaction-io-owner
+    send_money_blockchain_function --> smart_contracts_module : uses\nvalid-transaction-contract?
+    send_money_blockchain_function --> add_transaction_to_blockchain_function : uses\nadd-transaction-to-blockchain
+    send_money_blockchain_function --> blockchain : uses\nblockchain-utxo
+  }
+
+  blockchain_module --> send_money_blockchain_function : provides
+
+  package "balance-wallet" {
+    class "balance-wallet-blockchain" as balance_wallet_blockchain_function {
+      + balance-wallet-blockchain(b: blockchain,\nw: string): number
+    }
+
+    balance_wallet_blockchain_function --> blockchain : uses\nblockchain-utxo
+    balance_wallet_blockchain_function --> transaction_module : uses transaction-io-owner,\ntransaction-io-value
+  }
+
+  blockchain_module --> balance_wallet_blockchain_function : provides
+
+  package "validate?" {
+    class "valid-blockchain?" as valid_blockchain_function {
+      + valid-blockchain?(b: blockchain): boolean
+    }
+
+    valid_blockchain_function --> block_module : uses valid-block?,\nblock-previous-hash,\nblock-hash,\nblock-transaction
+    valid_blockchain_function --> transaction_module : uses\nvalid-transaction?
+    valid_blockchain_function --> utils_module : uses\ntrue-for-all?
+    valid_blockchain_function --> blockchain : uses\nblockchain-blocks
+  }
+
+  blockchain_module --> valid_blockchain_function : provides
+}
+@enduml

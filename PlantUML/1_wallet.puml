@@ -1,0 +1,44 @@
+@startuml
+package "wallet" {
+  class wallet {
+    - private-key: bytes
+    - public-key: bytes
+    + wallet(private-key: bytes, public-key: bytes)
+  }
+
+  class "crypto" as crypto_module
+
+  class "crypto/all" as crypto_all_module
+
+  wallet_module --> crypto_module
+  wallet_module --> crypto_all_module
+
+  wallet_module --> wallet
+
+  package "make-wallet" {
+    class "make-wallet" as make_wallet_function {
+      + make-wallet(): wallet
+    }
+
+    make_wallet_function --> wallet : creates
+
+    package "letrec" {
+      class "rsa-impl" as rsa_impl {
+        - rsa-impl: pk-impl
+      }
+
+      class "privkey" as privkey {
+        - privkey: private-key
+      }
+
+      class "pubkey" as pubkey {
+        - pubkey: public-key
+      }
+
+      rsa_impl --> crypto_module : uses 'rsa
+      privkey --> rsa_impl : generated from
+      pubkey --> privkey : derived from
+    }
+  }
+}
+@enduml

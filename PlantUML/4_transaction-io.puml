@@ -1,0 +1,53 @@
+@startuml
+package "transaction-in-and-out" {
+  class "sha" as sha_module {
+    + sha256(data: bytes): bytes
+    + bytes->hex-string(bytes: bytes): string
+  }
+
+  class "racket/serialize" as racket_serialize_module
+
+  transaction_io_module --> sha_module : requires only\nsha256 and\nbytes->hex-string
+  transaction_io_module --> racket_serialize_module : requires\nall
+
+  class transaction_io {
+    - hash: string
+    - value: number
+    - owner: string
+    - timestamp: number
+    + transaction-io(hash: string,\nvalue: number,\nowner: string,\ntimestamp: number)
+  }
+
+  transaction_io_module --> transaction_io : provides
+
+  package "calculate-transaction-io-hash" {
+    class "calculate-transaction-io-hash" as calculate_transaction_io_hash_function {
+      + calculate-transaction-io-hash(value: number,\nowner: string,\ntimestamp: number): string
+    }
+
+    calculate_transaction_io_hash_function --> sha_module : uses sha256\nand bytes->hex-string
+  }
+
+  package "make-transaction-io" {
+    class "make-transaction-io" as make_transaction_io_function {
+      + make-transaction-io(value: number,\nowner: string): transaction-io
+    }
+
+    make_transaction_io_function --> calculate_transaction_io_hash_function : uses\ncalculate-transaction-io-hash
+    make_transaction_io_function --> transaction_io : creates
+  }
+
+  transaction_io_module --> make_transaction_io_function : provides
+
+  package "valid-transaction-io?" {
+    class "valid-transaction-io?" as valid_transaction_io_function {
+      + valid-transaction-io?(t-in: transaction-io): boolean
+    }
+
+    valid_transaction_io_function --> transaction_io : uses transaction-io-hash,\ntransaction-io-value,\ntransaction-io-owner,\ntransaction-io-timestamp
+    valid_transaction_io_function --> calculate_transaction_io_hash_function : uses\ncalculate-transaction-io-hash
+  }
+
+  transaction_io_module --> valid_transaction_io_function : provides
+}
+@enduml

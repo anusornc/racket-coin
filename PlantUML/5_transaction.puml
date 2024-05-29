@@ -1,0 +1,89 @@
+@startuml
+package "transaction" {
+  class "transaction-io" as transaction_io_module
+  class "utils" as utils_module
+  class "file/sha1" as file_sha1_module {
+    + hex-string->bytes(hex-string: string): bytes
+  }
+  class "wallet" as wallet_module
+  class "crypto" as crypto_module
+  class "crypto/all" as crypto_all_module
+  class "racket/serialize" as racket_serialize_module
+
+  transaction_module --> transaction_io_module : requires\nall
+  transaction_module --> utils_module : requires\nall
+  transaction_module --> file_sha1_module : requires only\nhex-string->bytes
+  transaction_module --> wallet_module : requires\nall
+  transaction_module --> crypto_module : requires\nall
+  transaction_module --> crypto_all_module : requires\nall
+  transaction_module --> racket_serialize_module : requires\nall
+
+  class transaction {
+    - signature: string
+    - from: string
+    - to: string
+    - value: number
+    - inputs: list of transaction-io
+    - outputs: list of transaction-io
+    + transaction(signature: string,\nfrom: string,\nto: string,\nvalue: number,\ninputs: list,\noutputs: list)
+  }
+
+  transaction_module --> transaction : provides
+
+  package "make-transaction" {
+    class "make-transaction" as make_transaction_function {
+      + make-transaction(from: string,\nto: string,\nvalue: number,\ninputs: list): transaction
+    }
+
+    make_transaction_function --> transaction : creates
+  }
+
+  transaction_module --> make_transaction_function : provides
+
+  package "sign-transaction" {
+    class "sign-transaction" as sign_transaction_function {
+      + sign-transaction(from: string,\nto: string,\nvalue: number): string
+    }
+
+    sign_transaction_function --> wallet_module : uses wallet-private-key,\nwallet-public-key
+    sign_transaction_function --> crypto_module : uses\ndigest/sign
+    sign_transaction_function --> racket_serialize_module : uses\nserialize
+  }
+
+  package "process-transaction" {
+    class "process-transaction" as process_transaction_function {
+      + process-transaction(t: transaction): transaction
+    }
+
+    process_transaction_function --> transaction : uses transaction-inputs,\ntransaction-outputs,\ntransaction-value,\ntransaction-from,\ntransaction-to
+    process_transaction_function --> transaction_io_module : uses make-transaction-io,\ntransaction-io-value
+    process_transaction_function --> sign_transaction_function : uses\nsign-transaction
+  }
+
+  transaction_module --> process_transaction_function : provides
+
+  package "valid-transaction-signature?" {
+    class "valid-transaction-signature?" as valid_transaction_signature_function {
+      + valid-transaction-signature?(t: transaction): boolean
+    }
+
+    valid_transaction_signature_function --> wallet_module : uses\nwallet-public-key
+    valid_transaction_signature_function --> crypto_module : uses\ndigest/verify
+    valid_transaction_signature_function --> file_sha1_module : uses\nhex-string->bytes
+    valid_transaction_signature_function --> transaction : uses transaction-from,\ntransaction-to,\ntransaction-value,\ntransaction-signature
+  }
+
+  package "valid-transaction?" {
+    class "valid-transaction?" as valid_transaction_function {
+      + valid-transaction?(t: transaction): boolean
+    }
+
+    valid_transaction_function --> transaction : uses transaction-inputs,\ntransaction-outputs
+    valid_transaction_function --> transaction_io_module : uses\ntransaction-io-value
+    valid_transaction_function --> utils_module : uses\ntrue-for-all?
+    valid_transaction_function --> valid_transaction_signature_function : uses\nvalid-transaction-signature?
+  }
+
+  transaction_module --> valid_transaction_function : provides
+}
+@enduml

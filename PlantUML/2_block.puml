@@ -1,0 +1,72 @@
+@startuml
+package "block" {
+  class block {
+    - hash: string
+    - previous-hash: string
+    - transaction: any
+    - timestamp: integer
+    - nonce: integer
+    + block(hash: string,\nprevious-hash: string,\ntransaction: any,\ntimestamp: integer,\nnonce: integer)
+  }
+
+  class "file/sha1" as file_sha1_module {
+    + hex-string->bytes(hex-string: string): bytes
+  }
+
+  class "sha" as sha_module {
+    + sha256(data: bytes): bytes
+    + bytes->hex-string(bytes: bytes): string
+  }
+
+  class "serialize" as racket_serialize_module
+
+  block_module --> file_sha1_module : requires only\nhex-string->bytes
+  block_module --> sha_module : requires only\nsha256 and\nbytes->hex-string
+  block_module --> racket_serialize_module : requires all
+  block_module --> block : provides
+
+  package "calculate-block-hash" {
+    class "calculate-block-hash" as calculate_block_hash_function {
+      + calculate-block-hash(previous-hash: string,\ntimestamp: integer,\ntransaction: any,\nnonce: integer): string
+    }
+
+    calculate_block_hash_function --> sha_module : uses sha256\nand bytes->hex-string
+    calculate_block_hash_function --> racket_serialize_module : uses serialize
+  }
+
+  package "valid-block?" {
+    class "valid-block?" as valid_block_function {
+      + valid-block?(bl: block): boolean
+    }
+
+    valid_block_function --> block : uses block-hash,\nblock-previous-hash,\nblock-timestamp,\nblock-transaction,\nblock-nonce
+    valid_block_function --> calculate_block_hash_function : uses\ncalculate-block-hash
+  }
+
+  package "mined-block?" {
+    class "mined-block?" as mined_block_function {
+      + mined-block?(hash: string): boolean
+    }
+
+    mined_block_function --> file_sha1_module : uses\nhex-string->bytes
+  }
+
+  package "make-and-mine-block" {
+    class "make-and-mine-block" as make_and_mine_block_function {
+      + make-and-mine-block(previous-hash: string,\ntimestamp: integer,\ntransaction: any,\nnonce: integer): block
+    }
+
+    make_and_mine_block_function --> calculate_block_hash_function : uses\ncalculate-block-hash
+    make_and_mine_block_function --> mined_block_function : uses\nmined-block?
+    make_and_mine_block_function --> block : creates
+  }
+
+  package "mine-block" {
+    class "mine-block" as mine_block_function {
+      + mine-block(transaction: any,\nprevious-hash: string): block
+    }
+
+    mine_block_function --> make_and_mine_block_function : uses\nmake-and-mine-block
+  }
+}
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+package "util" {
+  class "serialize" as racket_serialize_module
+
+  util_module --> racket_serialize_module : requires\nall
+
+  package "true-for-all?" {
+    class "true-for-all?" as true_for_all_function {
+      + true-for-all?(pred: function,\nlist: list): boolean
+    }
+
+    true_for_all_function --> true_for_all_function : recursive\ncall
+  }
+
+  package "struct->file" {
+    class "struct->file" as struct_to_file_function {
+      + struct->file(object: struct,\nfile: string): void
+    }
+
+    struct_to_file_function --> racket_serialize_module : uses\nserialize
+  }
+
+  package "file->struct" {
+    class "file->struct" as file_to_struct_function {
+      + file->struct(file: string): struct
+    }
+
+    file_to_struct_function --> racket_serialize_module : uses\ndeserialize
+  }
+
+  package "file->contract" {
+    class "file->contract" as file_to_contract_function {
+      + file->contract(file: string): contract\nor '()
+    }
+
+    file_to_contract_function --> file_to_contract_function : handles\nexn:fail?
+  }
+
+  util_module --> true_for_all_function : provides
+  util_module --> struct_to_file_function : provides
+  util_module --> file_to_struct_function : provides
+  util_module --> file_to_contract_function : provides
+}
+@enduml

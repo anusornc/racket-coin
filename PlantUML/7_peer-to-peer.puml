@@ -1,0 +1,139 @@
+@startuml
+package "peer-to-peer" {
+ class "blockchain" as blockchain_module
+ class "block" as block_module
+ class "racket/serialize" as racket_serialize_module
+
+ class peer_info {
+   - ip: string
+   - port: number
+   + peer-info(ip: string, port: number)
+ }
+
+ class peer_info_io {
+   - pi: peer-info
+   - input-port: port
+   - output-port: port
+   + peer-info-io(pi: peer-info,\ninput-port: port,\noutput-port: port)
+ }
+
+ class peer_context_data {
+   - name: string
+   - port: number
+   - valid-peers: set
+   - connected-peers: set
+   - blockchain: blockchain
+   + peer-context-data(name: string,\nport: number,\nvalid-peers: set,\nconnected-peers: set,\nblockchain: blockchain)
+ }
+
+ package "handler" {
+   class "handler" as handler_function {
+     + handler(peer-context: peer-context-data,\nin: input-port, out: output-port): void
+   }
+ }
+
+ package "maybe-update-blockchain" {
+   class "maybe-update-blockchain" as maybe_update_blockchain_function {
+     + maybe-update-blockchain(peer-context: peer-context-data,\nline: string): void
+   }
+
+   maybe_update_blockchain_function --> blockchain_module : uses valid-blockchain?
+   maybe_update_blockchain_function --> peer_context_data : uses blockchain, name
+ }
+
+ package "get-blockchain-effort" {
+   class "get-blockchain-effort" as get_blockchain_effort_function {
+     + get-blockchain-effort(b: blockchain): number
+   }
+
+   get_blockchain_effort_function --> block_module : uses block-nonce
+   get_blockchain_effort_function --> blockchain_module : uses blockchain-blocks
+ }
+
+ package "maybe-update-valid-peers" {
+   class "maybe-update-valid-peers" as maybe_update_valid_peers_function {
+     + maybe-update-valid-peers(peer-context: peer-context-data,\nline: string): void
+   }
+
+   maybe_update_valid_peers_function --> peer_context_data : uses valid-peers
+ }
+
+ package "trim-helper" {
+   class "trim-helper" as trim_helper_function {
+     + trim-helper(line: string, x: regexp): any
+   }
+
+   trim_helper_function --> racket_serialize_module : uses deserialize
+ }
+
+ package "accept-and-handle" {
+   class "accept-and-handle" as accept_and_handle_function {
+     + accept-and-handle(listener: tcp-listener,\npeer-context: peer-context-data): void
+   }
+
+   accept_and_handle_function --> handler_function : uses handler
+ }
+
+ package "peers/serve" {
+   class "peers/serve" as peers_serve_function {
+     + peers/serve(peer-context: peer-context-data): (-> void)
+   }
+
+   peers_serve_function --> accept_and_handle_function : uses accept-and-handle
+   peers_serve_function --> peer_context_data : uses port
+ }
+
+ package "connect-and-handle" {
+   class "connect-and-handle" as connect_and_handle_function {
+     + connect-and-handle(peer-context: peer-context-data,\npeer: peer-info): void
+   }
+
+   connect_and_handle_function --> peer_info : uses ip, port
+   connect_and_handle_function --> peer_info_io : creates
+   connect_and_handle_function --> peer_context_data : uses connected-peers
+   connect_and_handle_function --> handler_function : uses handler
+ }
+
+ package "peers/connect" {
+   class "peers/connect" as peers_connect_function {
+     + peers/connect(peer-context: peer-context-data): (-> void)
+   }
+
+   peers_connect_function --> connect_and_handle_function : uses connect-and-handle
+ }
+
+ package "get-potential-peers" {
+   class "get-potential-peers" as get_potential_peers_function {
+     + get-potential-peers(peer-context: peer-context-data): set
+   }
+
+   get_potential_peers_function --> peer_info_io : uses peer-info-io-pi
+   get_potential_peers_function --> peer_context_data : uses connected-peers, valid-peers
+ }
+
+ package "peers/sync-data" {
+   class "peers/sync-data" as peers_sync_data_function {
+     + peers/sync-data(peer-context: peer-context-data): (-> void)
+   }
+
+   peers_sync_data_function --> peer_info_io : uses input-port, output-port
+   peers_sync_data_function --> peer_context_data : uses connected-peers, name, valid-peers
+ }
+
+ package "run-peer" {
+   class "run-peer" as run_peer_function {
+     + run-peer(peer-context: peer-context-data): void
+   }
+
+   run_peer_function --> peers_serve_function : uses peers/serve
+   run_peer_function --> peers_connect_function : uses peers/connect
+   run_peer_function --> peers_sync_data_function : uses peers/sync-data
+ }
+
+ peer_to_peer_module --> blockchain_module : requires all
+ peer_to_peer_module --> block_module : requires all
+ peer_to_peer_module --> racket_serialize_module : requires all
+ peer_to_peer_module --> peer_info : provides
+ peer_to_peer_module --> run_peer_function : provides
+}
+@enduml

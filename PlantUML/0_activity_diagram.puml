@@ -1,0 +1,23 @@
+@startuml
+start
+
+:Load ontology file;
+
+:Capture traceability data from user;
+
+:Validate data against ontology;
+
+if (Validation passed?) then (yes)
+    :Generate ontology triples;
+    :Create transaction object;
+    if (Authentication required?) then (yes)
+        :Sign transaction;
+    endif
+    :Submit transaction to blockchain;
+    :Handle transaction response;
+else (no)
+    :Display validation errors to user;
+endif
+
+stop
+@enduml

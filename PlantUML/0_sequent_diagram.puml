@@ -1,0 +1,30 @@
+@startuml
+participant User
+participant ClientApp
+participant Ontology
+participant Blockchain
+
+User -> ClientApp: Submit traceability data
+activate ClientApp
+
+ClientApp -> Ontology: Load ontology file
+activate Ontology
+Ontology --> ClientApp: Ontology structure
+deactivate Ontology
+
+ClientApp -> ClientApp: Validate data against ontology
+alt Validation passed
+    ClientApp -> ClientApp: Generate ontology triples
+    ClientApp -> ClientApp: Create transaction object
+    ClientApp -> ClientApp: Sign transaction (if required)
+    ClientApp -> Blockchain: Submit transaction
+    activate Blockchain
+    Blockchain --> ClientApp: Transaction response
+    deactivate Blockchain
+else Validation failed
+    ClientApp -> User: Display validation errors
+end
+
+ClientApp --> User: Transaction submission result
+deactivate ClientApp
+@enduml

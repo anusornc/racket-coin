@@ -7,7 +7,7 @@
          make-transaction-io valid-transaction-io?)
 #|
 Transaction-IO ใช้เพื่อเก็บข้อมูลของการทำธุรกรรม โดยมีข้อมูลดังนี้
-- hash: คือ has ของการทำธุรกรรม
+- hash: คือ hash ของการทำธุรกรรม
 - value: คือ จำนวนเงินที่ถูกโอน
 - owner: คือ ผู้ถือเงิน
 - timestamp: คือ เวลาที่ทำการทำธุรกรรม

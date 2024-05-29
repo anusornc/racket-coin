@@ -1,0 +1,14 @@
+@startuml
+start
+:Receive transaction (t) and contract (c);
+if (Is transaction valid?) then (yes)
+  if (Evaluate contract with transaction) then (true)
+    :Transaction is valid according to the contract;
+  else (false)
+    :Transaction is invalid according to the contract;
+  endif
+else (no)
+  :Transaction is invalid;
+endif
+stop
+@enduml
